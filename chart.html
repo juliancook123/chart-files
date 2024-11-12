@@ -39,9 +39,9 @@
             console.log('Initializing Highcharts for symbol:', symbol);
             Highcharts.stockChart('container', {
                 chart: {
-                    backgroundColor: '#000000', // Black background
+                    backgroundColor: '#151824', // Black background
                     style: {
-                        color: '#ffffff' // White text
+                        color: '#d2d4dc' // White text
                     },
                     panning: {
                         enabled: true,
@@ -105,7 +105,7 @@
                 },
                 plotOptions: {
                     series: {
-                        animation: false, // Disable animations for smoother panning
+                        animation: true, // Disable animations for smoother panning
                         turboThreshold: 0
                     }
                 },

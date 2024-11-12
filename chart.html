@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Highcharts Candlestick Chart</title>
+    <script src="https://code.highcharts.com/stock/highstock.js"></script>
+</head>
+<body style="margin:0; padding:0;">
+    <div id="container" style="width:100%; height:100%;"></div>
+    <script>
+        // Listen for messages from the parent Wix site
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'initChart') {
+                const { symbol, ohlcData } = event.data.data;
+                initializeChart(symbol, ohlcData);
+            }
+        }, false);
+
+        // Function to initialize the Highcharts candlestick chart
+        function initializeChart(symbol, ohlcData) {
+            Highcharts.stockChart('container', {
+                chart: {
+                    backgroundColor: '#000000', // Black background
+                    style: {
+                        color: '#ffffff' // White text
+                    },
+                    panning: {
+                        enabled: true,
+                        type: 'x'
+                    },
+                    panKey: 'shift', // Optional: requires holding shift to pan
+                    zoomType: 'x'
+                },
+                navigator: {
+                    enabled: false // Disable navigator
+                },
+                scrollbar: {
+                    enabled: false // Disable scrollbar
+                },
+                rangeSelector: {
+                    selected: 1,
+                    buttons: [{
+                        type: 'day',
+                        count: 7,
+                        text: '1w'
+                    }, {
+                        type: 'month',
+                        count: 1,
+                        text: '1m'
+                    }, {
+                        type: 'month',
+                        count: 3,
+                        text: '3m'
+                    }, {
+                        type: 'ytd',
+                        text: 'YTD'
+                    }, {
+                        type: 'year',
+                        count: 2,
+                        text: '2y'
+                    }, {
+                        type: 'all',
+                        text: 'All'
+                    }],
+                    inputEnabled: false
+                },
+                title: {
+                    text: `${symbol} Stock Price`,
+                    style: {
+                        color: '#ffffff'
+                    }
+                },
+                xAxis: {
+                    type: 'datetime',
+                    labels: {
+                        style: {
+                            color: '#ffffff'
+                        }
+                    }
+                },
+                yAxis: {
+                    labels: {
+                        style: {
+                            color: '#ffffff'
+                        }
+                    },
+                    title: {
+                        text: 'Price',
+                        style: {
+                            color: '#ffffff'
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#333333',
+                    style: {
+                        color: '#ffffff'
+                    },
+                    shared: true,
+                    crosshairs: true,
+                    valueDecimals: 2,
+                    headerFormat: '<b>{series.name}</b><br/>',
+                    pointFormat: 'Date: {point.x:%Y-%m-%d}<br/>Open: {point.open}<br/>High: {point.high}<br/>Low: {point.low}<br/>Close: {point.close}'
+                },
+                plotOptions: {
+                    series: {
+                        animation: false, // Disable animations for smoother panning
+                        turboThreshold: 0
+                    }
+                },
+                series: [{
+                    type: 'candlestick',
+                    name: symbol,
+                    data: ohlcData,
+                    upColor: '#00ff00', // Green for upward candles
+                    color: '#ff0000', // Red for downward candles
+                    tooltip: {
+                        valueDecimals: 2
+                    },
+                    lineColor: '#ffffff', // White wicks and borders
+                    borderWidth: 1
+                }]
+            });
+
+            // Set the initial visible range to the most recent couple of days
+            const recentDays = 3; // Display the last 3 days initially
+            const latestTimestamp = ohlcData[ohlcData.length - 1][0];
+            const daysInMillis = 24 * 60 * 60 * 1000;
+            const initialMin = latestTimestamp - (recentDays * daysInMillis);
+
+            // Set initial extremes
+            Highcharts.charts[Highcharts.charts.length - 1].xAxis[0].setExtremes(initialMin, latestTimestamp);
+
+            console.log('Chart initialized successfully.');
+        }
+
+        // Notify the parent that the chart is ready
+        window.parent.postMessage({ type: 'chartReady' }, '*');
+    </script>
+</body>
+</html>

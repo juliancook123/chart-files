@@ -39,7 +39,7 @@
             console.log('Initializing Highcharts for symbol:', symbol);
             Highcharts.stockChart('container', {
                 chart: {
-                    backgroundColor: '#151824', // Black background
+                    backgroundColor: '#151824', // Dark background color
                     style: {
                         color: '#d2d4dc' // White text
                     },
@@ -73,6 +73,8 @@
                 },
                 xAxis: {
                     type: 'datetime',
+                    gridLineColor: '#333333', // Faint grid color for x-axis
+                    gridLineWidth: 0.5, // Thin grid lines
                     labels: {
                         style: {
                             color: '#ffffff'
@@ -83,6 +85,8 @@
                     }
                 },
                 yAxis: {
+                    gridLineColor: '#333333', // Faint grid color for y-axis
+                    gridLineWidth: 0.5, // Thin grid lines
                     labels: {
                         style: {
                             color: '#ffffff'
@@ -104,8 +108,15 @@
                     pointFormat: 'Date: {point.x:%Y-%m-%d}<br/>Open: {point.open}<br/>High: {point.high}<br/>Low: {point.low}<br/>Close: {point.close}'
                 },
                 plotOptions: {
+                    candlestick: {
+                        lineColor: null, // No line around the candles
+                        borderColor: null, // Remove border color
+                        borderWidth: 0, // Set border width to 0
+                        upColor: '#039981', // Green for upward candles
+                        color: '#f23645' // Red for downward candles
+                    },
                     series: {
-                        animation: true, // Disable animations for smoother panning
+                        animation: true, // Enable smooth animations
                         turboThreshold: 0
                     }
                 },
@@ -113,13 +124,9 @@
                     type: 'candlestick',
                     name: symbol,
                     data: ohlcData,
-                    upColor: '#039981', // Green for upward candles
-                    color: '#f23645', // Red for downward candles
                     tooltip: {
                         valueDecimals: 2
-                    },
-                    lineColor: '#ffffff', // White wicks and borders
-                    borderWidth: 0
+                    }
                 }]
             });
 

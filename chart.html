@@ -5,19 +5,24 @@
     <title>Highcharts Candlestick Chart</title>
     <script src="https://code.highcharts.com/stock/highstock.js"></script>
 </head>
-<body style="margin:0; padding:0;">
+<body style="margin:0; padding:0; background-color: #000000;">
     <div id="container" style="width:100%; height:100%;"></div>
     <script>
+        console.log('chart.html loaded and listening for messages.');
+
         // Listen for messages from the parent Wix site
         window.addEventListener('message', function(event) {
+            console.log('Received message:', event.data);
             if (event.data.type === 'initChart') {
                 const { symbol, ohlcData } = event.data.data;
+                console.log('Initializing chart with:', symbol, ohlcData);
                 initializeChart(symbol, ohlcData);
             }
         }, false);
 
         // Function to initialize the Highcharts candlestick chart
         function initializeChart(symbol, ohlcData) {
+            console.log('Initializing Highcharts for symbol:', symbol);
             Highcharts.stockChart('container', {
                 chart: {
                     backgroundColor: '#000000', // Black background

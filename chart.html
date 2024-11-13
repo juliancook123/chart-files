@@ -5,7 +5,18 @@
     <title>Highcharts Candlestick Chart</title>
     <script src="https://code.highcharts.com/stock/highstock.js"></script>
     <style>
-        /* (Same CSS as before) */
+        /* Ensure the container fills the entire viewport */
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrollbars */
+        }
+        #container {
+            width: 100%;
+            height: 100%;
+        }
     </style>
 </head>
 <body>
@@ -143,7 +154,7 @@
             }
         }, false);
 
-        // Notify the parent that the chart is ready
+        // Notify the parent that the chart is ready (optional)
         window.parent.postMessage({ type: 'chartReady' }, '*');
     </script>
 </body>

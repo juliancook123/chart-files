@@ -27,11 +27,10 @@
         let currentChart = null;
 
         /**
-         * Initializes or updates the Highcharts candlestick chart.
-         * @param {string} symbol - The stock ticker symbol.
+         * Initializes the Highcharts candlestick chart.
          * @param {Array} data - The OHLC data array.
          */
-        function initializeChart(symbol, data) {
+        function initializeChart(data) {
             if (currentChart) {
                 currentChart.destroy();
             }
@@ -121,8 +120,9 @@
                 },
                 series: [{
                     type: 'candlestick',
-                    name: symbol,
+                    name: 'Price',
                     data: data,
+                    id: 'main-series',
                     tooltip: {
                         valueDecimals: 2
                     }
@@ -138,99 +138,35 @@
             // Set initial extremes
             currentChart.xAxis[0].setExtremes(initialMin, latestTimestamp);
 
-            console.log('Chart initialized successfully with symbol:', symbol);
+            console.log('Chart initialized successfully.');
         }
 
         /**
-         * Adds an Exponential Moving Average (EMA) to the chart.
-         * @param {number} period - The period of the EMA.
+         * Listen for messages from the parent Wix site and update the chart.
          */
-        function addEMA(period) {
-            if (!currentChart) {
-                console.error("Chart not initialized.");
+        window.addEventListener('message', function(event) {
+            // Security: Verify the message origin
+            const allowedOrigin = 'https://yourwixsite.com'; // <-- Update this
+            if (event.origin !== allowedOrigin) {
+                console.warn('Blocked message from unauthorized origin:', event.origin);
                 return;
             }
 
-            currentChart.addSeries({
-                type: 'ema',
-                name: `${period}-Day EMA`,
-                linkedTo: 'main-series',
-                data: null, // Highcharts calculates EMA automatically
-                params: {
-                    period: period
-                },
-                tooltip: {
-                    valueDecimals: 2
-                }
-            }, false);
-
-            currentChart.redraw();
-
-            console.log(`Added a ${period}-Day EMA to the chart.`);
-        }
-
-        /**
-         * Removes an Exponential Moving Average (EMA) from the chart.
-         * @param {string} name - The name of the EMA series to remove.
-         */
-        function removeEMA(name) {
-            if (!currentChart) {
-                console.error("Chart not initialized.");
-                return;
-            }
-
-            const series = currentChart.series.find(s => s.name === name && s.type === 'ema');
-            if (series) {
-                series.remove();
-                currentChart.redraw();
-                console.log(`Removed the ${name} from the chart.`);
-            } else {
-                console.warn(`No EMA named "${name}" found on the chart.`);
-            }
-        }
-
-        /**
-         * Listen for messages from the parent Wix site and execute commands.
-         */
-        window.addEventListener('message', async function(event) {
             console.log('Received message:', event.data);
             if (event.data.type === 'initChart') {
-                const { symbol, ohlcData } = event.data.data;
-                initializeChart(symbol, ohlcData);
-            } else if (event.data.type === 'updateTicker') {
-                const { ticker, ohlcData, commands } = event.data;
-                console.log('Updating chart with new ticker:', ticker);
-                if (ohlcData && ohlcData.length > 0) {
-                    initializeChart(ticker, ohlcData);
-                    // Execute any commands associated with the ticker update
-                    if (commands && Array.isArray(commands)) {
-                        commands.forEach(cmd => executeCommand(cmd));
-                    }
-                } else {
-                    console.error('No OHLC data received for ticker:', ticker);
-                }
-            } else if (event.data.type === 'addEMA') {
-                const { period } = event.data;
-                addEMA(period);
-                // Optionally, send a confirmation back to the parent or chat
+                const { data } = event.data;
+                initializeChart(data);
+            } else if (event.data.type === 'updateData') {
+                const { data } = event.data;
+                initializeChart(data);
             }
             // Add more message types and handlers as needed
         }, false);
 
         /**
-         * Execute a command received via postMessage.
-         * @param {Object} command - The command object containing type and parameters.
+         * Notify the parent that the chart is ready (optional)
          */
-        function executeCommand(command) {
-            if (command.type === 'addEMA') {
-                const period = command.parameters.period || 20; // Default to 20 if not specified
-                addEMA(period);
-            }
-            // Handle more command types here
-        }
-
-        // Notify the parent that the chart is ready (optional)
-        window.parent.postMessage({ type: 'chartReady' }, '*');
+        window.parent.postMessage({ type: 'chartReady' }, 'https://yourwixsite.com'); // <-- Update the target origin
     </script>
 </body>
 </html>

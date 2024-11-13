@@ -102,11 +102,11 @@
         // Listen for messages from parent (Wix)
         window.addEventListener('message', function(event) {
             // Security: Verify the message origin
-            const allowedOrigin = 'https://yourwixsite.com'; // <-- Update this
+            /*const allowedOrigin = 'https://yourwixsite.com'; // <-- Update this
             if (event.origin !== allowedOrigin) {
                 console.warn('Blocked message from unauthorized origin:', event.origin);
                 return;
-            }
+            }*/
 
             if (event.data.type === 'userMessage') {
                 appendMessage(event.data.text, 'user');

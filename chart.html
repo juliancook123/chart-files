@@ -6,7 +6,6 @@
     <script src="https://code.highcharts.com/stock/highstock.js"></script>
     <style>
         /* Ensure the container fills the entire viewport */
-        /* https://juliancook123.github.io/chart-files/chart.html */
         html, body {
             width: 100%;
             height: 100%;
@@ -25,19 +24,13 @@
     <script>
         console.log('chart.html loaded and listening for messages.');
 
-        // Listen for messages from the parent Wix site
-        window.addEventListener('message', function(event) {
-            console.log('Received message:', event.data);
-            if (event.data.type === 'initChart') {
-                const { symbol, ohlcData } = event.data.data;
-                console.log('Initializing chart with:', symbol, ohlcData);
-                initializeChart(symbol, ohlcData);
-            }
-        }, false);
+        let currentSymbol = 'AAPL'; // Default symbol
+        let ohlcData = []; // Initialize empty data
 
         // Function to initialize the Highcharts candlestick chart
-        function initializeChart(symbol, ohlcData) {
-            console.log('Initializing Highcharts for symbol:', symbol);
+        function initializeChart(symbol, data) {
+            currentSymbol = symbol;
+            ohlcData = data;
             Highcharts.stockChart('container', {
                 chart: {
                     backgroundColor: '#151824', // Dark background color
@@ -124,7 +117,7 @@
                 series: [{
                     type: 'candlestick',
                     name: symbol,
-                    data: ohlcData,
+                    data: data,
                     tooltip: {
                         valueDecimals: 2
                     }
@@ -133,7 +126,7 @@
 
             // Set the initial visible range to the most recent 3 days
             const recentDays = 3; // Display the last 3 days initially
-            const latestTimestamp = ohlcData[ohlcData.length - 1][0];
+            const latestTimestamp = data[data.length - 1][0];
             const daysInMillis = 24 * 60 * 60 * 1000;
             const initialMin = latestTimestamp - (recentDays * daysInMillis);
 
@@ -141,6 +134,38 @@
             Highcharts.charts[Highcharts.charts.length - 1].xAxis[0].setExtremes(initialMin, latestTimestamp);
 
             console.log('Chart initialized successfully.');
+        }
+
+        // Initial Chart Setup (can be replaced with default data)
+        // For demonstration, we'll assume ohlcData is fetched and passed here
+        // initializeChart('AAPL', initialData);
+
+        // Listen for messages from the parent Wix site
+        window.addEventListener('message', async function(event) {
+            console.log('Received message:', event.data);
+            if (event.data.type === 'initChart') {
+                const { symbol, ohlcData } = event.data.data;
+                initializeChart(symbol, ohlcData);
+            } else if (event.data.type === 'updateTicker') {
+                const newTicker = event.data.ticker;
+                console.log('Updating chart with new ticker:', newTicker);
+                // Fetch new data based on the ticker
+                const newData = await fetchOHLCData(newTicker);
+                if (newData.length > 0) {
+                    initializeChart(newTicker, newData);
+                } else {
+                    console.error('No data received for ticker:', newTicker);
+                }
+            }
+        }, false);
+
+        // Function to fetch OHLC data for a given ticker symbol
+        async function fetchOHLCData(ticker) {
+            // Implement data fetching logic here
+            // This could involve sending a message back to the parent or fetching data via API
+            // For simplicity, assuming the parent sends the necessary data
+            // If you need to fetch data here, consider CORS and API key issues
+            return []; // Placeholder
         }
 
         // Notify the parent that the chart is ready

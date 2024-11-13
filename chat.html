@@ -58,7 +58,7 @@
             align-self: flex-start;
         }
 
-        /* Scrollbar Styling */
+        /* Scrollbar Styling (Commented Out) */
         /*#messages::-webkit-scrollbar {
             width: 6px;
         }
@@ -86,7 +86,11 @@
         // Reference to messages container
         const messagesContainer = document.getElementById('messages');
 
-        // Function to Append Message to Chat
+        /**
+         * Function to Append Message to Chat
+         * @param {string} text - The message text.
+         * @param {string} sender - The sender type ('user' or 'bot').
+         */
         function appendMessage(text, sender) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', sender);
@@ -97,6 +101,13 @@
 
         // Listen for messages from parent (Wix)
         window.addEventListener('message', function(event) {
+            // Security: Verify the message origin
+            const allowedOrigin = 'https://yourwixsite.com'; // <-- Update this
+            if (event.origin !== allowedOrigin) {
+                console.warn('Blocked message from unauthorized origin:', event.origin);
+                return;
+            }
+
             if (event.data.type === 'userMessage') {
                 appendMessage(event.data.text, 'user');
             } else if (event.data.type === 'botMessage') {

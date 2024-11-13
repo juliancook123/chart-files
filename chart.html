@@ -24,14 +24,15 @@
     <script>
         console.log('chart.html loaded and listening for messages.');
 
-        let currentSymbol = 'AAPL'; // Default symbol
-        let ohlcData = []; // Initialize empty data
+        let currentChart = null;
 
-        // Function to initialize the Highcharts candlestick chart
+        // Function to initialize or update the Highcharts candlestick chart
         function initializeChart(symbol, data) {
-            currentSymbol = symbol;
-            ohlcData = data;
-            Highcharts.stockChart('container', {
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            currentChart = Highcharts.stockChart('container', {
                 chart: {
                     backgroundColor: '#151824', // Dark background color
                     style: {
@@ -131,42 +132,27 @@
             const initialMin = latestTimestamp - (recentDays * daysInMillis);
 
             // Set initial extremes
-            Highcharts.charts[Highcharts.charts.length - 1].xAxis[0].setExtremes(initialMin, latestTimestamp);
+            currentChart.xAxis[0].setExtremes(initialMin, latestTimestamp);
 
-            console.log('Chart initialized successfully.');
+            console.log('Chart initialized successfully with symbol:', symbol);
         }
 
-        // Initial Chart Setup (can be replaced with default data)
-        // For demonstration, we'll assume ohlcData is fetched and passed here
-        // initializeChart('AAPL', initialData);
-
         // Listen for messages from the parent Wix site
-        window.addEventListener('message', async function(event) {
+        window.addEventListener('message', function(event) {
             console.log('Received message:', event.data);
             if (event.data.type === 'initChart') {
                 const { symbol, ohlcData } = event.data.data;
                 initializeChart(symbol, ohlcData);
             } else if (event.data.type === 'updateTicker') {
-                const newTicker = event.data.ticker;
-                console.log('Updating chart with new ticker:', newTicker);
-                // Fetch new data based on the ticker
-                const newData = await fetchOHLCData(newTicker);
-                if (newData.length > 0) {
-                    initializeChart(newTicker, newData);
+                const { ticker, ohlcData } = event.data;
+                console.log('Updating chart with new ticker:', ticker);
+                if (ohlcData && ohlcData.length > 0) {
+                    initializeChart(ticker, ohlcData);
                 } else {
-                    console.error('No data received for ticker:', newTicker);
+                    console.error('No OHLC data received for ticker:', ticker);
                 }
             }
         }, false);
-
-        // Function to fetch OHLC data for a given ticker symbol
-        async function fetchOHLCData(ticker) {
-            // Implement data fetching logic here
-            // This could involve sending a message back to the parent or fetching data via API
-            // For simplicity, assuming the parent sends the necessary data
-            // If you need to fetch data here, consider CORS and API key issues
-            return []; // Placeholder
-        }
 
         // Notify the parent that the chart is ready
         window.parent.postMessage({ type: 'chartReady' }, '*');

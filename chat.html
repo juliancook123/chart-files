@@ -58,35 +58,6 @@
             border-bottom-left-radius: 0;
         }
 
-        /* Input Area */
-        #inputArea {
-            display: flex;
-            border-top: 1px solid #ccc;
-            padding: 10px 0;
-        }
-
-        #messageInput {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 20px;
-            background-color: #f2f2f2;
-            outline: none;
-        }
-
-        #sendButton {
-            margin-left: 10px;
-            padding: 0 15px;
-            border: none;
-            background-color: #0084FF;
-            color: #ffffff;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 16px;
-            height: 40px;
-            width: 40px;
-        }
-
         /* Scrollbar Styling */
         #messages::-webkit-scrollbar {
             width: 6px;
@@ -109,48 +80,11 @@
 <body>
     <div id="chatContainer">
         <div id="messages"></div>
-        <div id="inputArea">
-            <input type="text" id="messageInput" placeholder="Type your message..." />
-            <button id="sendButton">➤</button>
-        </div>
     </div>
 
     <script>
-        // Initialize OpenAI API Key (This is insecure; API calls should be handled server-side)
-        // For production, handle API calls via server to protect the API key
-        const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY'; // Replace with your actual API key
-
         // Reference to messages container
         const messagesContainer = document.getElementById('messages');
-
-        // Handle Send Button Click
-        document.getElementById('sendButton').addEventListener('click', sendMessage);
-
-        // Handle Enter Key Press in Input
-        document.getElementById('messageInput').addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
-            }
-        });
-
-        // Function to Send Message
-        async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const text = input.value.trim();
-            if (text === "") return;
-
-            // Display user message
-            appendMessage(text, 'user');
-
-            // Clear input
-            input.value = "";
-
-            // Send message to parent (Wix) for processing
-            window.parent.postMessage({
-                type: 'userMessage',
-                text: text
-            }, '*');
-        }
 
         // Function to Append Message to Chat
         function appendMessage(text, sender) {
@@ -163,54 +97,12 @@
 
         // Listen for messages from parent (Wix)
         window.addEventListener('message', function(event) {
-            if (event.data.type === 'botMessage') {
-                const { text } = event.data;
-                appendMessage(text, 'bot');
-                // Check for ticker symbol and notify parent to update chart
-                const tickerSymbol = extractTickerSymbol(text);
-                if (tickerSymbol) {
-                    window.parent.postMessage({
-                        type: 'updateChart',
-                        ticker: tickerSymbol
-                    }, '*');
-                }
+            if (event.data.type === 'userMessage') {
+                appendMessage(event.data.text, 'user');
+            } else if (event.data.type === 'botMessage') {
+                appendMessage(event.data.text, 'bot');
             }
         });
-
-        // Function to Extract Ticker Symbol from Bot Message
-        function extractTickerSymbol(text) {
-            const regex = /\[Ticker:\s?([A-Z]{1,5})\]/;
-            const match = text.match(regex);
-            if (match && match[1]) {
-                return match[1];
-            }
-            return null;
-        }
-        // Listen for messages from parent (Wix)
-    window.addEventListener('message', function(event) {
-        if (event.data.type === 'botMessage') {
-            const { text } = event.data;
-            appendMessage(text, 'bot');
-            // Check for ticker symbol and notify parent to update chart
-            const tickerSymbol = extractTickerSymbol(text);
-            if (tickerSymbol) {
-                window.parent.postMessage({
-                    type: 'updateChart',
-                    ticker: tickerSymbol
-                }, '*');
-            }
-        }
-    });
-
-    // Function to Extract Ticker Symbol from Bot Message
-    function extractTickerSymbol(text) {
-        const regex = /\[Ticker:\s?([A-Z]{1,5})\]/;
-        const match = text.match(regex);
-        if (match && match[1]) {
-            return match[1];
-        }
-        return null;
-    }
     </script>
 </body>
 </html>

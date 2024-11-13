@@ -186,6 +186,31 @@
             }
             return null;
         }
+        // Listen for messages from parent (Wix)
+    window.addEventListener('message', function(event) {
+        if (event.data.type === 'botMessage') {
+            const { text } = event.data;
+            appendMessage(text, 'bot');
+            // Check for ticker symbol and notify parent to update chart
+            const tickerSymbol = extractTickerSymbol(text);
+            if (tickerSymbol) {
+                window.parent.postMessage({
+                    type: 'updateChart',
+                    ticker: tickerSymbol
+                }, '*');
+            }
+        }
+    });
+
+    // Function to Extract Ticker Symbol from Bot Message
+    function extractTickerSymbol(text) {
+        const regex = /\[Ticker:\s?([A-Z]{1,5})\]/;
+        const match = text.match(regex);
+        if (match && match[1]) {
+            return match[1];
+        }
+        return null;
+    }
     </script>
 </body>
 </html>

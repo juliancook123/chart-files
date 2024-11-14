@@ -25,6 +25,8 @@
         console.log('chart.html loaded and listening for messages.');
 
         let currentChart = null;
+        let originalData = []; // To store the original OHLC data
+        let indicators = {}; // To keep track of added indicators
 
         /**
          * Initializes the Highcharts candlestick chart.
@@ -34,6 +36,8 @@
             if (currentChart) {
                 currentChart.destroy();
             }
+
+            originalData = data; // Store original data
 
             currentChart = Highcharts.stockChart('container', {
                 chart: {
@@ -142,6 +146,47 @@
         }
 
         /**
+         * Adds an indicator to the chart based on the provided code.
+         * @param {string} code - The JavaScript function as a string.
+         * @param {string} indicatorName - The name of the indicator.
+         */
+        function addIndicator(code, indicatorName) {
+            if (!currentChart || !originalData.length) {
+                console.error("Chart is not initialized.");
+                return;
+            }
+
+            try {
+                // Create a new Function to execute the provided code
+                const modifyDataFunction = new Function('data', code + '\n return modifyData(data);');
+                const modifiedData = modifyDataFunction(originalData);
+
+                // Determine the new data column index (assuming the indicator is the last column)
+                const indicatorData = modifiedData.map(point => [point[0], point[5]]); // Adjust index as needed
+
+                // Add the new indicator series to the chart
+                currentChart.addSeries({
+                    name: indicatorName,
+                    data: indicatorData,
+                    type: 'line',
+                    yAxis: 0,
+                    color: '#FFD700', // Gold color for indicators, adjust as needed
+                    tooltip: {
+                        valueDecimals: 2
+                    }
+                }, true, true);
+
+                // Store the indicator to prevent duplicates
+                indicators[indicatorName] = true;
+
+                console.log(`Indicator "${indicatorName}" added successfully.`);
+            } catch (e) {
+                console.error("Error adding indicator:", e);
+                // Optionally, notify the user about the error
+            }
+        }
+
+        /**
          * Listen for messages from the parent Wix site and update the chart.
          */
         window.addEventListener('message', function(event) {
@@ -159,6 +204,13 @@
             } else if (event.data.type === 'updateData') {
                 const { data } = event.data;
                 initializeChart(data);
+            } else if (event.data.type === 'addIndicator') {
+                const { code, indicatorName } = event.data;
+                if (!indicators[indicatorName]) {
+                    addIndicator(code, indicatorName);
+                } else {
+                    console.warn(`Indicator "${indicatorName}" already exists.`);
+                }
             }
             // Add more message types and handlers as needed
         }, false);
@@ -166,7 +218,7 @@
         /**
          * Notify the parent that the chart is ready (optional)
          */
-        window.parent.postMessage({ type: 'chartReady' }, 'https://yourwixsite.com'); // <-- Update the target origin
+        window.parent.postMessage({ type: 'chartReady' }, '*'); // Update target origin as needed
     </script>
 </body>
 </html>

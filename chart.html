@@ -27,6 +27,7 @@
         let currentChart = null;
         let originalData = []; // To store the original OHLC data
         let indicators = {}; // To keep track of added indicators
+        let baseDataLength = 5; // Initial data columns: [timestamp, open, high, low, close]
 
         /**
          * Initializes the Highcharts candlestick chart.
@@ -38,6 +39,7 @@
             }
 
             originalData = data; // Store original data
+            baseDataLength = data[0].length; // Reset base data length
 
             currentChart = Highcharts.stockChart('container', {
                 chart: {
@@ -153,6 +155,8 @@
             if (currentChart) {
                 const mainSeries = currentChart.get('main-series');
                 mainSeries.setData(data, true);
+                originalData = data; // Update originalData
+                baseDataLength = 5; // Reset base data length after update
                 console.log('Chart data updated.');
             }
         }
@@ -168,115 +172,50 @@
             }
 
             try {
-                const { type, color, options } = render;
+                const { series } = render;
 
-                // Define a unique name for the indicator based on the type and timestamp
-                const seriesName = `${type} - ${new Date().getTime()}`;
-
-                // Prepare the series options
-                const seriesOptions = {
-                    name: seriesName,
-                    data: extractIndicatorData(type),
-                    type: type,
-                    yAxis: 0,
-                    color: color || '#FFFFFF', // Default to white if color not specified
-                    tooltip: {
-                        valueDecimals: 2
-                    },
-                    ...options // Spread any additional options
-                };
-
-                // Handle different render types
-                if (type.toLowerCase() === 'band') {
-                    // For shaded regions like Bollinger Bands
-                    // Assuming data has two series: upper and lower bands
-                    const upperBandData = extractIndicatorData(`${type} Upper Band`);
-                    const lowerBandData = extractIndicatorData(`${type} Lower Band`);
-
-                    // Add upper band
-                    currentChart.addSeries({
-                        name: `${seriesName} Upper Band`,
-                        data: upperBandData,
-                        type: 'line',
-                        yAxis: 0,
-                        color: color || '#FFD700',
-                        dashStyle: 'Dash',
-                        tooltip: {
-                            valueDecimals: 2
-                        },
-                        ...options
-                    }, true, true);
-
-                    // Add lower band
-                    currentChart.addSeries({
-                        name: `${seriesName} Lower Band`,
-                        data: lowerBandData,
-                        type: 'line',
-                        yAxis: 0,
-                        color: color || '#FF6347',
-                        dashStyle: 'Dash',
-                        tooltip: {
-                            valueDecimals: 2
-                        },
-                        ...options
-                    }, true, true);
-
-                    // Add a shaded region between upper and lower bands
-                    currentChart.addSeries({
-                        name: `${seriesName} Shaded Area`,
-                        data: createShadedAreaData(upperBandData, lowerBandData),
-                        type: 'arearange',
-                        yAxis: 0,
-                        color: color || 'rgba(173, 216, 230, 0.2)',
-                        lineWidth: 0,
-                        linkedTo: `${seriesName} Upper Band`,
-                        fillOpacity: 0.2,
-                        tooltip: {
-                            valueDecimals: 2
-                        },
-                        ...options
-                    }, true, true);
-
-                } else {
-                    // For line indicators like EMA, SMA, MACD, etc.
-                    currentChart.addSeries(seriesOptions, true, true);
+                if (!Array.isArray(series) || series.length === 0) {
+                    console.error("Render object must contain a non-empty 'series' array.");
+                    return;
                 }
 
-                console.log(`Indicator "${seriesName}" added successfully.`);
+                console.log(`Adding ${series.length} series for indicator.`);
+
+                // Iterate over each series in the render instructions
+                series.forEach((s, index) => {
+                    const dataIndex = baseDataLength + index;
+                    const seriesData = originalData.map(point => {
+                        const yValue = point[dataIndex];
+                        // If yValue is null or undefined, skip adding the point
+                        if (yValue === null || yValue === undefined) {
+                            return null;
+                        }
+                        return [point[0], yValue];
+                    });
+
+                    currentChart.addSeries({
+                        name: s.name,
+                        data: seriesData,
+                        type: s.type,
+                        yAxis: 0,
+                        color: s.color || '#FFFFFF', // Use defined color or default to white
+                        tooltip: {
+                            valueDecimals: 2
+                        },
+                        ...s.options // Spread any additional options
+                    }, true, true);
+
+                    console.log(`Series "${s.name}" added with dataIndex ${dataIndex}.`);
+                });
+
+                // Update the baseDataLength to account for newly added series
+                baseDataLength += series.length;
+
+                console.log(`Indicator added successfully with ${series.length} series.`);
             } catch (e) {
                 console.error("Error adding indicator:", e);
                 // Optionally, notify the user about the error
             }
-        }
-
-        /**
-         * Extracts indicator data from the chart's existing series based on the type.
-         * Assumes that the data for indicators are appended to the original data.
-         * @param {string} indicatorType - The type/name of the indicator series.
-         * @returns {Array} - The data array for the indicator.
-         */
-        function extractIndicatorData(indicatorType) {
-            const series = currentChart.series.find(s => s.name.startsWith(indicatorType));
-            if (series) {
-                return series.options.data;
-            } else {
-                console.warn(`No series found for indicator type "${indicatorType}".`);
-                return [];
-            }
-        }
-
-        /**
-         * Creates shaded area data between two series.
-         * @param {Array} upperBand - Data array for the upper band.
-         * @param {Array} lowerBand - Data array for the lower band.
-         * @returns {Array} - Data array for the shaded area.
-         */
-        function createShadedAreaData(upperBand, lowerBand) {
-            const shadedData = upperBand.map((point, index) => {
-                const lowerPoint = lowerBand[index] || [point[0], null];
-                return [point[0], point[1], lowerPoint[1]];
-            });
-            return shadedData;
         }
 
         /**
@@ -294,10 +233,10 @@
                 updateChartData(data);
             } else if (event.data.type === 'addIndicator') {
                 const { render } = event.data;
-                if (render) {
+                if (render && render.series) {
                     addIndicator(render);
                 } else {
-                    console.warn("Render instructions missing for addIndicator.");
+                    console.warn("Render instructions missing or invalid for addIndicator.");
                 }
             }
             // Add more message types and handlers as needed

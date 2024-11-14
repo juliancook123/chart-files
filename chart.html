@@ -1,3 +1,4 @@
+<!-- public/pages/chart.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,7 +27,6 @@
 
         let currentChart = null;
         let originalData = []; // To store the original OHLC data
-        let indicators = {}; // To keep track of added indicators
         let baseDataLength = 5; // Initial data columns: [timestamp, open, high, low, close]
 
         /**
@@ -164,57 +164,65 @@
         /**
          * Adds an indicator to the chart based on the provided render instructions.
          * @param {Object} render - The render instructions object.
+         * @param {string} indicatorId - The unique ID of the indicator.
          */
-        function addIndicator(render) {
-            if (!currentChart || !originalData.length) {
-                console.error("Chart is not initialized.");
+        function addIndicator(render, indicatorId) {
+            if (!currentChart || !render.series) {
+                console.error("Chart is not initialized or render instructions are missing.");
                 return;
             }
 
             try {
-                const { series } = render;
-
-                if (!Array.isArray(series) || series.length === 0) {
-                    console.error("Render object must contain a non-empty 'series' array.");
-                    return;
-                }
-
-                console.log(`Adding ${series.length} series for indicator.`);
-
-                // Iterate over each series in the render instructions
-                series.forEach((s, index) => {
-                    const dataIndex = baseDataLength + index;
+                render.series.forEach(series => {
                     const seriesData = originalData.map(point => {
-                        const yValue = point[dataIndex];
-                        // If yValue is null or undefined, skip adding the point
-                        if (yValue === null || yValue === undefined) {
-                            return null;
-                        }
-                        return [point[0], yValue];
+                        const yValue = point[series.dataIndex]; // Ensure dataIndex is correctly set
+                        return yValue !== null && yValue !== undefined ? [point[0], yValue] : null;
                     });
 
                     currentChart.addSeries({
-                        name: s.name,
+                        name: series.name,
                         data: seriesData,
-                        type: s.type,
+                        type: series.type,
                         yAxis: 0,
-                        color: s.color || '#FFFFFF', // Use defined color or default to white
+                        color: series.color || '#FFFFFF',
                         tooltip: {
                             valueDecimals: 2
                         },
-                        ...s.options // Spread any additional options
+                        ...series.options
                     }, true, true);
 
-                    console.log(`Series "${s.name}" added with dataIndex ${dataIndex}.`);
+                    console.log(`Series "${series.name}" added to chart.`);
                 });
 
-                // Update the baseDataLength to account for newly added series
-                baseDataLength += series.length;
+                console.log(`Indicator with ID ${indicatorId} added successfully.`);
+            } catch (error) {
+                console.error("Error adding indicator to chart:", error);
+            }
+        }
 
-                console.log(`Indicator added successfully with ${series.length} series.`);
-            } catch (e) {
-                console.error("Error adding indicator:", e);
-                // Optionally, notify the user about the error
+        /**
+         * Removes an indicator from the chart based on the indicator ID.
+         * @param {string} indicatorId - The unique ID of the indicator.
+         */
+        function removeIndicator(indicatorId) {
+            const indicator = indicatorRegistry.getIndicator(indicatorId);
+            if (!indicator) {
+                console.error(`Indicator with ID ${indicatorId} not found in registry.`);
+                return;
+            }
+
+            try {
+                indicator.name.forEach(seriesName => {
+                    const series = currentChart.series.find(s => s.name === seriesName);
+                    if (series) {
+                        series.remove();
+                        console.log(`Series "${seriesName}" removed from chart.`);
+                    }
+                });
+
+                console.log(`Indicator with ID ${indicatorId} removed successfully.`);
+            } catch (error) {
+                console.error("Error removing indicator from chart:", error);
             }
         }
 
@@ -232,12 +240,11 @@
                 const { data } = event.data;
                 updateChartData(data);
             } else if (event.data.type === 'addIndicator') {
-                const { render } = event.data;
-                if (render && render.series) {
-                    addIndicator(render);
-                } else {
-                    console.warn("Render instructions missing or invalid for addIndicator.");
-                }
+                const { render, indicator_id } = event.data;
+                addIndicator(render, indicator_id);
+            } else if (event.data.type === 'remove_indicator') {
+                const { indicator_id } = event.data;
+                removeIndicator(indicator_id);
             }
             // Add more message types and handlers as needed
         }, false);

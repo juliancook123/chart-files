@@ -28,6 +28,20 @@
         let originalData = []; // To store the original OHLC data
         let indicators = {}; // To keep track of added indicators
 
+        // Mapping of indicator names to the number of data points they add
+        const indicatorDataPoints = {
+            '20-day EMA': 1,
+            'Bollinger Bands': 3,
+            // Add more indicators here as needed
+        };
+
+        // Mapping of indicator names to their respective series names
+        const indicatorSeriesNames = {
+            '20-day EMA': ['20-day EMA'],
+            'Bollinger Bands': ['SMA', 'Upper Band', 'Lower Band'],
+            // Add more indicators here as needed
+        };
+
         /**
          * Initializes the Highcharts candlestick chart.
          * @param {Array} data - The OHLC data array.
@@ -146,6 +160,18 @@
         }
 
         /**
+         * Updates the chart data.
+         * @param {Array} data - The updated OHLC data array.
+         */
+        function updateChartData(data) {
+            if (currentChart) {
+                const mainSeries = currentChart.get('main-series');
+                mainSeries.setData(data, true);
+                console.log('Chart data updated.');
+            }
+        }
+
+        /**
          * Adds an indicator to the chart based on the provided code.
          * @param {string} code - The JavaScript function as a string.
          * @param {string} indicatorName - The name of the indicator.
@@ -157,29 +183,38 @@
             }
 
             try {
-                // Create a new Function to execute the provided code
+                // Execute the modifyData function to add the indicator data
                 const modifyDataFunction = new Function('data', code + '\n return modifyData(data);');
                 const modifiedData = modifyDataFunction(originalData);
 
-                // Determine the new data column index (assuming the indicator is the last column)
-                const indicatorData = modifiedData.map(point => [point[0], point[5]]); // Adjust index as needed
+                // Determine how many data points were added
+                const addedDataPoints = indicatorDataPoints[indicatorName] || 1; // default to 1
 
-                // Add the new indicator series to the chart
-                currentChart.addSeries({
-                    name: indicatorName,
-                    data: indicatorData,
-                    type: 'line',
-                    yAxis: 0,
-                    color: '#FFD700', // Gold color for indicators, adjust as needed
-                    tooltip: {
-                        valueDecimals: 2
-                    }
-                }, true, true);
+                // Get the series names for the indicator
+                const seriesNames = indicatorSeriesNames[indicatorName] || [indicatorName];
 
-                // Store the indicator to prevent duplicates
-                indicators[indicatorName] = true;
+                // Get the indices of the new data points
+                const dataLength = modifiedData[0].length;
+                const startIndex = dataLength - addedDataPoints;
 
-                console.log(`Indicator "${indicatorName}" added successfully.`);
+                for (let i = 0; i < addedDataPoints; i++) {
+                    const dataIndex = startIndex + i;
+                    const seriesName = `${indicatorName} ${seriesNames[i]}`;
+                    const seriesData = modifiedData.map(point => [point[0], point[dataIndex]]);
+
+                    currentChart.addSeries({
+                        name: seriesName,
+                        data: seriesData,
+                        type: 'line',
+                        yAxis: 0,
+                        color: getIndicatorColor(indicatorName, i), // Dynamic color based on indicator and index
+                        tooltip: {
+                            valueDecimals: 2
+                        }
+                    }, true, true);
+                }
+
+                console.log(`Indicator "${indicatorName}" added successfully with ${addedDataPoints} data points.`);
             } catch (e) {
                 console.error("Error adding indicator:", e);
                 // Optionally, notify the user about the error
@@ -187,27 +222,41 @@
         }
 
         /**
+         * Returns a color based on the indicator and its index.
+         * Customize colors as needed.
+         * @param {string} indicatorName 
+         * @param {number} index 
+         * @returns {string} - Hex color code
+         */
+        function getIndicatorColor(indicatorName, index) {
+            const colorMap = {
+                '20-day EMA': '#FFA500', // Orange
+                'Bollinger Bands SMA': '#00FF00', // Green
+                'Bollinger Bands Upper Band': '#FFD700', // Gold
+                'Bollinger Bands Lower Band': '#FF6347', // Tomato
+                // Add more indicators and colors as needed
+            };
+            return colorMap[`${indicatorName} ${indicatorSeriesNames[indicatorName][index]}`] || '#FFFFFF'; // Default to white
+        }
+
+        /**
          * Listen for messages from the parent Wix site and update the chart.
          */
         window.addEventListener('message', function(event) {
-            // Security: Verify the message origin
-            /*const allowedOrigin = 'https://yourwixsite.com'; // <-- Update this
-            if (event.origin !== allowedOrigin) {
-                console.warn('Blocked message from unauthorized origin:', event.origin);
-                return;
-            }*/
+            // Security: Verify the message origin if needed
 
-            console.log('Received message:', event.data);
+            console.log('Received message in chart.html:', event.data);
             if (event.data.type === 'initChart') {
                 const { data } = event.data;
                 initializeChart(data);
             } else if (event.data.type === 'updateData') {
                 const { data } = event.data;
-                initializeChart(data);
+                updateChartData(data);
             } else if (event.data.type === 'addIndicator') {
                 const { code, indicatorName } = event.data;
                 if (!indicators[indicatorName]) {
                     addIndicator(code, indicatorName);
+                    indicators[indicatorName] = true; // Mark as added
                 } else {
                     console.warn(`Indicator "${indicatorName}" already exists.`);
                 }

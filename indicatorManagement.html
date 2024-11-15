@@ -89,13 +89,13 @@
             window.parent.postMessage({
                 type: 'remove_indicator_request',
                 indicator_id: indicatorId
-            }); // Replace with your actual origin
+            }, '*'); // As per user request, no origin checking
         }
 
         // Initial load: Request the current indicator registry
         window.parent.postMessage({
             type: 'getIndicatorRegistry'
-        }); // Replace with your actual origin
+        }, '*'); // As per user request, no origin checking
     </script>
 </body>
 </html>

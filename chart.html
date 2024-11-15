@@ -27,7 +27,6 @@
 
         let currentChart = null;
         let originalData = []; // To store the original OHLC data
-        let baseDataLength = 5; // Initial data columns: [timestamp, open, high, low, close]
 
         /**
          * Initializes the Highcharts candlestick chart.
@@ -39,7 +38,6 @@
             }
 
             originalData = data; // Store original data
-            baseDataLength = data[0].length; // Reset base data length
 
             currentChart = Highcharts.stockChart('container', {
                 chart: {
@@ -156,7 +154,6 @@
                 const mainSeries = currentChart.get('main-series');
                 mainSeries.setData(data, true);
                 originalData = data; // Update originalData
-                baseDataLength = 5; // Reset base data length after update
                 console.log('Chart data updated.');
             }
         }
@@ -180,7 +177,7 @@
                     });
 
                     currentChart.addSeries({
-                        name: series.name,
+                        name: `${indicatorId} - ${series.name}`, // Unique name incorporating indicatorId
                         data: seriesData,
                         type: series.type,
                         yAxis: 0,
@@ -191,7 +188,7 @@
                         ...series.options
                     }, true, true);
 
-                    console.log(`Series "${series.name}" added to chart.`);
+                    console.log(`Series "${series.name}" added to chart with indicator ID ${indicatorId}.`);
                 });
 
                 console.log(`Indicator with ID ${indicatorId} added successfully.`);
@@ -205,18 +202,16 @@
          * @param {string} indicatorId - The unique ID of the indicator.
          */
         function removeIndicator(indicatorId) {
-            const indicator = indicatorRegistry.getIndicator(indicatorId);
-            if (!indicator) {
-                console.error(`Indicator with ID ${indicatorId} not found in registry.`);
+            if (!currentChart) {
+                console.error("Chart is not initialized.");
                 return;
             }
 
             try {
-                indicator.name.forEach(seriesName => {
-                    const series = currentChart.series.find(s => s.name === seriesName);
-                    if (series) {
+                currentChart.series.forEach(series => {
+                    if (series.name.startsWith(`${indicatorId} - `)) { // Check if the series belongs to the indicator
                         series.remove();
-                        console.log(`Series "${seriesName}" removed from chart.`);
+                        console.log(`Series "${series.name}" removed from chart.`);
                     }
                 });
 
@@ -231,6 +226,7 @@
          */
         window.addEventListener('message', function(event) {
             // Security: Verify the message origin if needed
+            // e.g., if (event.origin !== 'https://your-domain.com') { return; }
 
             console.log('Received message in chart.html:', event.data);
             if (event.data.type === 'initChart') {
@@ -252,7 +248,7 @@
         /**
          * Notify the parent that the chart is ready (optional)
          */
-        window.parent.postMessage({ type: 'chartReady' }, '*'); // Update target origin as needed
+        window.parent.postMessage({ type: 'chartReady' }); // Update target origin as needed
     </script>
 </body>
 </html>

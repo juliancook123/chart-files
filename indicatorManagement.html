@@ -56,36 +56,46 @@
             }
         }, false);
 
+        /**
+         * Renders the list of indicators in the DOM.
+         * @param {Array} indicators - Array of indicator objects.
+         */
         function renderIndicatorList(indicators) {
             const indicatorList = document.getElementById('indicator-list');
             indicatorList.innerHTML = ''; // Clear existing list
 
-            for (const [id, metadata] of Object.entries(indicators)) {
+            indicators.forEach(indicator => {
                 const listItem = document.createElement('li');
-                listItem.textContent = metadata.name.join(', ');
+                // Ensure that metadata.name is an array before joining
+                const indicatorNames = Array.isArray(indicator.metadata.name) ? indicator.metadata.name.join(', ') : indicator.metadata.name;
+                listItem.textContent = indicatorNames;
 
                 const removeButton = document.createElement('button');
                 removeButton.textContent = 'Remove';
                 removeButton.className = 'remove-button';
-                removeButton.onclick = () => removeIndicator(id);
+                removeButton.onclick = () => removeIndicator(indicator.indicatorId);
 
                 listItem.appendChild(removeButton);
                 indicatorList.appendChild(listItem);
-            }
+            });
         }
 
+        /**
+         * Sends a request to remove an indicator.
+         * @param {string} indicatorId - The unique ID of the indicator to remove.
+         */
         function removeIndicator(indicatorId) {
             // Send remove_indicator_request message to the main index.js
             window.parent.postMessage({
                 type: 'remove_indicator_request',
                 indicator_id: indicatorId
-            }, '*'); // Replace '*' with specific origin if needed
+            }); // Replace with your actual origin
         }
 
         // Initial load: Request the current indicator registry
         window.parent.postMessage({
             type: 'getIndicatorRegistry'
-        }, '*'); // Replace '*' with specific origin if needed
+        }); // Replace with your actual origin
     </script>
 </body>
 </html>

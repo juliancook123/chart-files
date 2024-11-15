@@ -247,7 +247,7 @@
         /**
          * Notify the parent that the chart is ready (optional)
          */
-        window.parent.postMessage({ type: 'chartReady' }); // As user doesn't want origin checks, use '*'
+        window.parent.postMessage({ type: 'chartReady' }, '*'); // As user doesn't want origin checks, use '*'
     </script>
 </body>
 </html>

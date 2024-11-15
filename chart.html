@@ -225,8 +225,7 @@
          * Listen for messages from the parent Wix site and update the chart.
          */
         window.addEventListener('message', function(event) {
-            // Security: Verify the message origin if needed
-            // e.g., if (event.origin !== 'https://your-domain.com') { return; }
+            // No origin check as per user request
 
             console.log('Received message in chart.html:', event.data);
             if (event.data.type === 'initChart') {
@@ -248,7 +247,7 @@
         /**
          * Notify the parent that the chart is ready (optional)
          */
-        window.parent.postMessage({ type: 'chartReady' }); // Update target origin as needed
+        window.parent.postMessage({ type: 'chartReady' }); // As user doesn't want origin checks, use '*'
     </script>
 </body>
 </html>

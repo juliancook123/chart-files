@@ -152,9 +152,15 @@
         function updateChartData(data) {
             if (currentChart) {
                 const mainSeries = currentChart.get('main-series');
-                mainSeries.setData(data, true);
-                originalData = data; // Update originalData
-                console.log('Chart data updated.');
+                if (mainSeries) {
+                    mainSeries.setData(data, true);
+                    originalData = data; // Update originalData
+                    console.log('Chart data updated.');
+                } else {
+                    console.error("Main series not found.");
+                }
+            } else {
+                console.error("Chart is not initialized.");
             }
         }
 
@@ -169,19 +175,35 @@
                 return;
             }
 
+            console.log(`Adding Indicator: ${indicatorId}`, render);
+
             try {
                 render.series.forEach(series => {
+                    console.log(`Processing series: ${series.name}`);
+
+                    // Validate dataIndex
+                    if (typeof series.dataIndex !== 'number' || series.dataIndex < 0) {
+                        console.error(`Invalid dataIndex for series "${series.name}":`, series.dataIndex);
+                        return;
+                    }
+
+                    // Extract y-values based on dataIndex
                     const seriesData = originalData.map(point => {
-                        const yValue = point[series.dataIndex]; // Ensure dataIndex is correctly set
+                        const yValue = point[series.dataIndex];
                         return yValue !== null && yValue !== undefined ? [point[0], yValue] : null;
-                    });
+                    }).filter(point => point !== null); // Remove nulls
+
+                    if (seriesData.length === 0) {
+                        console.warn(`No valid data points for series "${series.name}".`);
+                        return;
+                    }
 
                     currentChart.addSeries({
-                        name: `${indicatorId} - ${series.name}`, // Unique name incorporating indicatorId
+                        name: `${indicatorId} - ${series.name}`,
                         data: seriesData,
                         type: series.type,
                         yAxis: 0,
-                        color: series.color || '#FFFFFF',
+                        color: series.color || '#FF0000', // Default to red if not specified
                         tooltip: {
                             valueDecimals: 2
                         },
@@ -230,15 +252,19 @@
             console.log('Received message in chart.html:', event.data);
             if (event.data.type === 'initChart') {
                 const { data } = event.data;
+                console.log('Initializing chart with data:', data);
                 initializeChart(data);
             } else if (event.data.type === 'updateData') {
                 const { data } = event.data;
+                console.log('Updating chart data:', data);
                 updateChartData(data);
             } else if (event.data.type === 'addIndicator') {
                 const { render, indicator_id } = event.data;
+                console.log(`Adding indicator ${indicator_id} with render instructions:`, render);
                 addIndicator(render, indicator_id);
             } else if (event.data.type === 'remove_indicator') {
                 const { indicator_id } = event.data;
+                console.log(`Removing indicator with ID: ${indicator_id}`);
                 removeIndicator(indicator_id);
             }
             // Add more message types and handlers as needed
@@ -247,7 +273,7 @@
         /**
          * Notify the parent that the chart is ready (optional)
          */
-        window.parent.postMessage({ type: 'chartReady' }, '*'); // As user doesn't want origin checks, use '*'
+        window.parent.postMessage({ type: 'chartReady' }); // As user doesn't want origin checks, use '*'
     </script>
 </body>
 </html>

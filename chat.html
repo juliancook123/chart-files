@@ -33,6 +33,9 @@
             flex: 1;
             overflow-y: auto;
             padding-right: 0px;
+            display: flex; /* Enables flex layout */
+            flex-direction: column; /* Stacks messages vertically */
+            padding: 10px; /* Optional: Adds padding around messages */
         }
 
         /* Message Styling */
@@ -44,18 +47,24 @@
             word-wrap: break-word;
             font-size: 14px;
             line-height: 1.4;
+            max-width: 60%; /* Optional: Limits message width */
+            /* Removed text-align: left; */
         }
 
+        /* User Message Styling */
         .user {
             color: #d2d4dc;
-            background-color: #151824;
-            align-self: flex-end;
+            background-color: #0D0F17;
+            align-self: flex-end; /* Aligns to left */
+            text-align: left; /* Ensures text is left-aligned inside */
         }
 
+        /* Bot Message Styling */
         .bot {
             color: #d2d4dc;
-            background-color: #151824;
-            align-self: flex-start;
+            background-color: #0D0F17;
+            align-self: flex-start; /* Aligns to right */
+            text-align: right; /* Ensures text is left-aligned inside */
         }
 
         /* Scrollbar Styling (Commented Out) */
@@ -79,7 +88,8 @@
 </head>
 <body>
     <div id="chatContainer">
-        <div id="messages"></div>
+        <div id="messages">
+        </div>
     </div>
 
     <script>

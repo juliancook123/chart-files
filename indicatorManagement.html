@@ -1,101 +1,87 @@
-<!-- public/pages/indicatorManagement.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
     <title>Indicator Management</title>
     <style>
-        #indicator-management-panel {
-            padding: 20px;
-            background-color: #f5f5f5;
-            border-radius: 5px;
-            width: 300px;
-            height: 100%;
-            overflow-y: auto;
+        body {
+            font-family: Arial, sans-serif;
+            padding: 10px;
+            background-color: #0D0F17;
         }
-
-        #indicator-list {
+        h2 {
+            text-align: center;
+        }
+        ul {
             list-style-type: none;
             padding: 0;
         }
-
-        #indicator-list li {
+        li {
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            color: #d2d4dc;
+            background-color: #151824;
+            border: 1px solid #d2d4dc;
+            border-radius: 4px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 5px 0;
         }
-
+        .indicator-name {
+            font-weight: bold;
+        }
         .remove-button {
-            background-color: #ff4d4d;
+            background-color: #e74c3c;
+            color: #fff;
             border: none;
-            color: white;
-            padding: 5px 10px;
+            padding: 6px 10px;
             border-radius: 3px;
             cursor: pointer;
         }
-
         .remove-button:hover {
-            background-color: #ff1a1a;
+            background-color: #c0392b;
         }
     </style>
 </head>
 <body>
-    <div id="indicator-management-panel">
-        <h3>Added Indicators</h3>
-        <ul id="indicator-list">
-            <!-- Dynamically populated list -->
-        </ul>
-    </div>
+    <ul id="indicatorList">
+        <!-- Indicators will be dynamically populated here -->
+    </ul>
 
     <script>
-        // Listen for updates to the indicator registry
-        window.addEventListener('message', function(event) {
-            if (event.data.type === 'indicatorRegistryUpdate') {
-                renderIndicatorList(event.data.indicators);
-            }
-        }, false);
-
-        /**
-         * Renders the list of indicators in the DOM.
-         * @param {Array} indicators - Array of indicator objects.
-         */
-        function renderIndicatorList(indicators) {
-            const indicatorList = document.getElementById('indicator-list');
-            indicatorList.innerHTML = ''; // Clear existing list
-
-            indicators.forEach(indicator => {
-                const listItem = document.createElement('li');
-                // Ensure that metadata.name is an array before joining
-                const indicatorNames = Array.isArray(indicator.metadata.name) ? indicator.metadata.name.join(', ') : indicator.metadata.name;
-                listItem.textContent = indicatorNames;
-
-                const removeButton = document.createElement('button');
-                removeButton.textContent = 'Remove';
-                removeButton.className = 'remove-button';
-                removeButton.onclick = () => removeIndicator(indicator.indicatorId);
-
-                listItem.appendChild(removeButton);
-                indicatorList.appendChild(listItem);
-            });
-        }
-
-        /**
-         * Sends a request to remove an indicator.
-         * @param {string} indicatorId - The unique ID of the indicator to remove.
-         */
+        // Function to remove an indicator
         function removeIndicator(indicatorId) {
-            // Send remove_indicator_request message to the main index.js
-            window.parent.postMessage({
-                type: 'remove_indicator_request',
-                indicator_id: indicatorId
-            }, '*'); // As per user request, no origin checking
+            // Send a message to the parent to remove the indicator
+            window.parent.postMessage({ type: 'removeIndicator', indicatorId: indicatorId }, '*');
         }
 
-        // Initial load: Request the current indicator registry
-        window.parent.postMessage({
-            type: 'getIndicatorRegistry'
-        }, '*'); // As per user request, no origin checking
+        // Listen for messages from the parent to update the indicator list
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'updateIndicators') {
+                const indicators = event.data.indicators;
+                const indicatorList = document.getElementById('indicatorList');
+                indicatorList.innerHTML = ''; // Clear existing list
+
+                indicators.forEach(indicator => {
+                    const li = document.createElement('li');
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'indicator-name';
+                    nameSpan.textContent = indicator.metadata.name[0] || 'Unnamed Indicator';
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-button';
+                    removeBtn.textContent = 'Remove';
+                    removeBtn.onclick = () => removeIndicator(indicator.indicatorId);
+
+                    li.appendChild(nameSpan);
+                    li.appendChild(removeBtn);
+                    indicatorList.appendChild(li);
+                });
+            }
+        });
+
+        // Notify the parent that the iframe is ready to receive messages
+        window.parent.postMessage({ type: 'iframeReady' }, '*');
     </script>
 </body>
 </html>

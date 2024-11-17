@@ -26,18 +26,27 @@
         console.log('chart.html loaded and listening for messages.');
 
         let currentChart = null;
-        let originalData = []; // To store the original OHLC data
+        let originalData = []; // To store the original OHLC data as objects
 
         /**
          * Initializes the Highcharts candlestick chart.
-         * @param {Array} data - The OHLC data array.
+         * @param {Array<Object>} data - The OHLC data array with named properties.
          */
         function initializeChart(data) {
             if (currentChart) {
                 currentChart.destroy();
             }
 
-            originalData = data; // Store original data
+            originalData = data; // Store original data as objects
+
+            // Map the data to Highcharts' expected format: [timestamp, open, high, low, close]
+            const formattedData = originalData.map(point => [
+                point.timestamp, 
+                point.open, 
+                point.high, 
+                point.low, 
+                point.close
+            ]);
 
             currentChart = Highcharts.stockChart('container', {
                 chart: {
@@ -111,7 +120,8 @@
                 },
                 plotOptions: {
                     candlestick: {
-                        lineColor: null, // No line around the candles
+                        lineColor: null,
+                        upLineColor: '#039981',// No line around the candles
                         borderColor: null, // Remove border color
                         borderWidth: 0, // Set border width to 0
                         upColor: '#039981', // Green for upward candles
@@ -125,7 +135,7 @@
                 series: [{
                     type: 'candlestick',
                     name: 'Price',
-                    data: data,
+                    data: formattedData, // Use the formatted data
                     id: 'main-series',
                     tooltip: {
                         valueDecimals: 2
@@ -135,7 +145,7 @@
 
             // Set the initial visible range to the most recent 3 days
             const recentDays = 3; // Display the last 3 days initially
-            const latestTimestamp = data[data.length - 1][0];
+            const latestTimestamp = formattedData[formattedData.length - 1][0];
             const daysInMillis = 24 * 60 * 60 * 1000;
             const initialMin = latestTimestamp - (recentDays * daysInMillis);
 
@@ -147,14 +157,22 @@
 
         /**
          * Updates the chart data.
-         * @param {Array} data - The updated OHLC data array.
+         * @param {Array<Object>} data - The updated OHLC data array with named properties.
          */
         function updateChartData(data) {
             if (currentChart) {
                 const mainSeries = currentChart.get('main-series');
                 if (mainSeries) {
-                    mainSeries.setData(data, true);
-                    originalData = data; // Update originalData
+                    // Map the data to Highcharts' expected format: [timestamp, open, high, low, close]
+                    const formattedData = data.map(point => [
+                        point.timestamp, 
+                        point.open, 
+                        point.high, 
+                        point.low, 
+                        point.close
+                    ]);
+                    mainSeries.setData(formattedData, true);
+                    originalData = data; // Update originalData as objects
                     console.log('Chart data updated.');
                 } else {
                     console.error("Main series not found.");
@@ -181,36 +199,65 @@
                 render.series.forEach(series => {
                     console.log(`Processing series: ${series.name}`);
 
-                    // Validate dataIndex
-                    if (typeof series.dataIndex !== 'number' || series.dataIndex < 0) {
-                        console.error(`Invalid dataIndex for series "${series.name}":`, series.dataIndex);
-                        return;
+                    // Determine if the series is an arearange (shaded region) or a standard series
+                    if (series.type === 'arearange') {
+                        // For arearange, use dataIndexLow and dataIndexHigh as property names
+                        const { dataIndexLow, dataIndexHigh } = series;
+
+                        // Extract the low and high values from the originalData objects
+                        const seriesData = originalData.map(point => {
+                            const lowValue = point[dataIndexLow];
+                            const highValue = point[dataIndexHigh];
+                            return (lowValue !== null && lowValue !== undefined && highValue !== null && highValue !== undefined) ? [point.timestamp, lowValue, highValue] : null;
+                        }).filter(point => point !== null); // Remove nulls
+
+                        if (seriesData.length === 0) {
+                            console.warn(`No valid data points for series "${series.name}".`);
+                            return;
+                        }
+
+                        currentChart.addSeries({
+                            name: `${indicatorId} - ${series.name}`,
+                            data: seriesData,
+                            type: series.type,
+                            yAxis: 0,
+                            color: series.color || '#FF0000', // Default to red if not specified
+                            tooltip: {
+                                valueDecimals: 2
+                            },
+                            ...series.options
+                        }, true, true);
+
+                        console.log(`Series "${series.name}" added to chart with indicator ID ${indicatorId}.`);
+                    } else {
+                        // For standard series (e.g., line, column)
+                        const { dataIndex } = series;
+
+                        // Extract the y-value based on the property name
+                        const seriesData = originalData.map(point => {
+                            const yValue = point[dataIndex];
+                            return (yValue !== null && yValue !== undefined) ? [point.timestamp, yValue] : null;
+                        }).filter(point => point !== null); // Remove nulls
+
+                        if (seriesData.length === 0) {
+                            console.warn(`No valid data points for series "${series.name}".`);
+                            return;
+                        }
+
+                        currentChart.addSeries({
+                            name: `${indicatorId} - ${series.name}`,
+                            data: seriesData,
+                            type: series.type,
+                            yAxis: 0,
+                            color: series.color || '#FF0000', // Default to red if not specified
+                            tooltip: {
+                                valueDecimals: 2
+                            },
+                            ...series.options
+                        }, true, true);
+
+                        console.log(`Series "${series.name}" added to chart with indicator ID ${indicatorId}.`);
                     }
-
-                    // Extract y-values based on dataIndex
-                    const seriesData = originalData.map(point => {
-                        const yValue = point[series.dataIndex];
-                        return yValue !== null && yValue !== undefined ? [point[0], yValue] : null;
-                    }).filter(point => point !== null); // Remove nulls
-
-                    if (seriesData.length === 0) {
-                        console.warn(`No valid data points for series "${series.name}".`);
-                        return;
-                    }
-
-                    currentChart.addSeries({
-                        name: `${indicatorId} - ${series.name}`,
-                        data: seriesData,
-                        type: series.type,
-                        yAxis: 0,
-                        color: series.color || '#FF0000', // Default to red if not specified
-                        tooltip: {
-                            valueDecimals: 2
-                        },
-                        ...series.options
-                    }, true, true);
-
-                    console.log(`Series "${series.name}" added to chart with indicator ID ${indicatorId}.`);
                 });
 
                 console.log(`Indicator with ID ${indicatorId} added successfully.`);
@@ -273,7 +320,7 @@
         /**
          * Notify the parent that the chart is ready (optional)
          */
-        window.parent.postMessage({ type: 'chartReady' }); // As user doesn't want origin checks, use '*'
+        window.parent.postMessage({ type: 'chartReady' }, '*'); // As user doesn't want origin checks, use '*'
     </script>
 </body>
 </html>

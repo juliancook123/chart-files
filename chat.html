@@ -1,129 +1,326 @@
+<!-- public/pages/chart.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Wix Chat Interface</title>
+    <title>Highcharts Candlestick Chart</title>
+    <script src="https://code.highcharts.com/stock/highstock.js"></script>
     <style>
-        /* Basic Reset */
-        /* https://juliancook123.github.io/chart-files/chart.html */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        /* Chat Container */
-        body {
+        /* Ensure the container fills the entire viewport */
+        html, body {
             width: 100%;
             height: 100%;
-            background-color: #0D0F17;
-            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrollbars */
         }
-
-        #chatContainer {
-            display: flex;
-            flex-direction: column;
+        #container {
+            width: 100%;
             height: 100%;
-            padding: 0px;
-            overflow: hidden;
         }
-
-        /* Messages Area */
-        #messages {
-            flex: 1;
-            overflow-y: auto;
-            padding-right: 0px;
-            display: flex; /* Enables flex layout */
-            flex-direction: column; /* Stacks messages vertically */
-            padding: 10px; /* Optional: Adds padding around messages */
-        }
-
-        /* Message Styling */
-        .message {
-            margin-bottom: 10px;
-            padding: 5px 10px;
-            border-radius: 5px;
-            position: relative;
-            word-wrap: break-word;
-            font-size: 14px;
-            line-height: 1.4;
-            max-width: 60%; /* Optional: Limits message width */
-            /* Removed text-align: left; */
-        }
-
-        /* User Message Styling */
-        .user {
-            color: #d2d4dc;
-            background-color: #0D0F17;
-            align-self: flex-end; /* Aligns to left */
-            text-align: left; /* Ensures text is left-aligned inside */
-        }
-
-        /* Bot Message Styling */
-        .bot {
-            color: #d2d4dc;
-            background-color: #0D0F17;
-            align-self: flex-start; /* Aligns to right */
-            text-align: left; /* Ensures text is left-aligned inside */
-        }
-
-        /* Scrollbar Styling (Commented Out) */
-        /*#messages::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        #messages::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-
-        #messages::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 3px;
-        }
-
-        #messages::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }*/
     </style>
 </head>
 <body>
-    <div id="chatContainer">
-        <div id="messages">
-        </div>
-    </div>
-
+    <div id="container"></div>
     <script>
-        // Reference to messages container
-        const messagesContainer = document.getElementById('messages');
+        console.log('chart.html loaded and listening for messages.');
+
+        let currentChart = null;
+        let originalData = []; // To store the original OHLC data as objects
 
         /**
-         * Function to Append Message to Chat
-         * @param {string} text - The message text.
-         * @param {string} sender - The sender type ('user' or 'bot').
+         * Initializes the Highcharts candlestick chart.
+         * @param {Array<Object>} data - The OHLC data array with named properties.
          */
-        function appendMessage(text, sender) {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message', sender);
-            messageDiv.textContent = text;
-            messagesContainer.appendChild(messageDiv);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        function initializeChart(data) {
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            originalData = data; // Store original data as objects
+
+            // Map the data to Highcharts' expected format: [timestamp, open, high, low, close]
+            const formattedData = originalData.map(point => [
+                point.timestamp, 
+                point.open, 
+                point.high, 
+                point.low, 
+                point.close
+            ]);
+
+            currentChart = Highcharts.stockChart('container', {
+                chart: {
+                    backgroundColor: '#0D0F17', // Dark background color
+                    style: {
+                        color: '#d2d4dc' // White text
+                    },
+                    panning: {
+                        enabled: true,
+                        type: 'x'
+                    },
+                    panKey: 'shift', // Optional: requires holding shift to pan
+                    zoomType: 'x',
+                    events: {
+                        load: function () {
+                            const chart = this;
+                            // Make chart responsive
+                            window.addEventListener('resize', function () {
+                                chart.reflow();
+                            });
+                        }
+                    }
+                },
+                navigator: {
+                    enabled: false // Disable navigator
+                },
+                scrollbar: {
+                    enabled: false // Disable scrollbar
+                },
+                rangeSelector: {
+                    enabled: false // Remove clickable zoom options
+                },
+                title: {
+                    text: null // Remove chart title
+                },
+                xAxis: {
+                    type: 'datetime',
+                    gridLineColor: '#333333', // Faint grid color for x-axis
+                    gridLineWidth: 0.5, // Thin grid lines
+                    labels: {
+                        style: {
+                            color: '#ffffff'
+                        }
+                    },
+                    title: {
+                        text: null // Remove xAxis title
+                    }
+                },
+                yAxis: {
+                    gridLineColor: '#333333', // Faint grid color for y-axis
+                    gridLineWidth: 0.5, // Thin grid lines
+                    labels: {
+                        style: {
+                            color: '#ffffff'
+                        }
+                    },
+                    title: {
+                        text: null // Remove yAxis title
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#333333',
+                    style: {
+                        color: '#ffffff'
+                    },
+                    shared: true,
+                    crosshairs: true,
+                    valueDecimals: 2,
+                    headerFormat: '<b>{series.name}</b><br/>',
+                    pointFormat: 'Date: {point.x:%Y-%m-%d}<br/>Open: {point.open}<br/>High: {point.high}<br/>Low: {point.low}<br/>Close: {point.close}'
+                },
+                plotOptions: {
+                    candlestick: {
+                        lineColor: null,
+                        upLineColor: '#039981',// No line around the candles
+                        borderColor: null, // Remove border color
+                        borderWidth: 0, // Set border width to 0
+                        upColor: '#039981', // Green for upward candles
+                        color: '#f23645' // Red for downward candles
+                    },
+                    series: {
+                        animation: true, // Enable smooth animations
+                        turboThreshold: 0
+                    }
+                },
+                series: [{
+                    type: 'candlestick',
+                    name: 'Price',
+                    data: formattedData, // Use the formatted data
+                    id: 'main-series',
+                    tooltip: {
+                        valueDecimals: 2
+                    }
+                }]
+            });
+
+            // Set the initial visible range to the most recent 3 days
+            const recentDays = 3; // Display the last 3 days initially
+            const latestTimestamp = formattedData[formattedData.length - 1][0];
+            const daysInMillis = 24 * 60 * 60 * 1000;
+            const initialMin = latestTimestamp - (recentDays * daysInMillis);
+
+            // Set initial extremes
+            currentChart.xAxis[0].setExtremes(initialMin, latestTimestamp);
+
+            console.log('Chart initialized successfully.');
         }
 
-        // Listen for messages from parent (Wix)
-        window.addEventListener('message', function(event) {
-            // Security: Verify the message origin
-            /*const allowedOrigin = 'https://yourwixsite.com'; // <-- Update this
-            if (event.origin !== allowedOrigin) {
-                console.warn('Blocked message from unauthorized origin:', event.origin);
-                return;
-            }*/
-
-            if (event.data.type === 'userMessage') {
-                appendMessage(event.data.text, 'user');
-            } else if (event.data.type === 'botMessage') {
-                appendMessage(event.data.text, 'bot');
+        /**
+         * Updates the chart data.
+         * @param {Array<Object>} data - The updated OHLC data array with named properties.
+         */
+        function updateChartData(data) {
+            if (currentChart) {
+                const mainSeries = currentChart.get('main-series');
+                if (mainSeries) {
+                    // Map the data to Highcharts' expected format: [timestamp, open, high, low, close]
+                    const formattedData = data.map(point => [
+                        point.timestamp, 
+                        point.open, 
+                        point.high, 
+                        point.low, 
+                        point.close
+                    ]);
+                    mainSeries.setData(formattedData, true);
+                    originalData = data; // Update originalData as objects
+                    console.log('Chart data updated.');
+                } else {
+                    console.error("Main series not found.");
+                }
+            } else {
+                console.error("Chart is not initialized.");
             }
-        });
+        }
+
+        /**
+         * Adds an indicator to the chart based on the provided render instructions.
+         * @param {Object} render - The render instructions object.
+         * @param {string} indicatorId - The unique ID of the indicator.
+         */
+        function addIndicator(render, indicatorId) {
+            if (!currentChart || !render.series) {
+                console.error("Chart is not initialized or render instructions are missing.");
+                return;
+            }
+
+            console.log(`Adding Indicator: ${indicatorId}`, render);
+
+            try {
+                render.series.forEach(series => {
+                    console.log(`Processing series: ${series.name}`);
+
+                    // Determine if the series is an arearange (shaded region) or a standard series
+                    if (series.type === 'arearange') {
+                        // For arearange, use dataIndexLow and dataIndexHigh as property names
+                        const { dataIndexLow, dataIndexHigh } = series;
+
+                        // Extract the low and high values from the originalData objects
+                        const seriesData = originalData.map(point => {
+                            const lowValue = point[dataIndexLow];
+                            const highValue = point[dataIndexHigh];
+                            return (lowValue !== null && lowValue !== undefined && highValue !== null && highValue !== undefined) ? [point.timestamp, lowValue, highValue] : null;
+                        }).filter(point => point !== null); // Remove nulls
+
+                        if (seriesData.length === 0) {
+                            console.warn(`No valid data points for series "${series.name}".`);
+                            return;
+                        }
+
+                        currentChart.addSeries({
+                            name: `${indicatorId} - ${series.name}`,
+                            data: seriesData,
+                            type: series.type,
+                            yAxis: 0,
+                            color: series.color || '#FF0000', // Default to red if not specified
+                            tooltip: {
+                                valueDecimals: 2
+                            },
+                            ...series.options
+                        }, true, true);
+
+                        console.log(`Series "${series.name}" added to chart with indicator ID ${indicatorId}.`);
+                    } else {
+                        // For standard series (e.g., line, column)
+                        const { dataIndex } = series;
+
+                        // Extract the y-value based on the property name
+                        const seriesData = originalData.map(point => {
+                            const yValue = point[dataIndex];
+                            return (yValue !== null && yValue !== undefined) ? [point.timestamp, yValue] : null;
+                        }).filter(point => point !== null); // Remove nulls
+
+                        if (seriesData.length === 0) {
+                            console.warn(`No valid data points for series "${series.name}".`);
+                            return;
+                        }
+
+                        currentChart.addSeries({
+                            name: `${indicatorId} - ${series.name}`,
+                            data: seriesData,
+                            type: series.type,
+                            yAxis: 0,
+                            color: series.color || '#FF0000', // Default to red if not specified
+                            tooltip: {
+                                valueDecimals: 2
+                            },
+                            ...series.options
+                        }, true, true);
+
+                        console.log(`Series "${series.name}" added to chart with indicator ID ${indicatorId}.`);
+                    }
+                });
+
+                console.log(`Indicator with ID ${indicatorId} added successfully.`);
+            } catch (error) {
+                console.error("Error adding indicator to chart:", error);
+            }
+        }
+
+        /**
+         * Removes an indicator from the chart based on the indicator ID.
+         * @param {string} indicatorId - The unique ID of the indicator.
+         */
+        function removeIndicator(indicatorId) {
+            if (!currentChart) {
+                console.error("Chart is not initialized.");
+                return;
+            }
+
+            try {
+                currentChart.series.forEach(series => {
+                    if (series.name.startsWith(`${indicatorId} - `)) { // Check if the series belongs to the indicator
+                        series.remove();
+                        console.log(`Series "${series.name}" removed from chart.`);
+                    }
+                });
+
+                console.log(`Indicator with ID ${indicatorId} removed successfully.`);
+            } catch (error) {
+                console.error("Error removing indicator from chart:", error);
+            }
+        }
+
+        /**
+         * Listen for messages from the parent Wix site and update the chart.
+         */
+        window.addEventListener('message', function(event) {
+            // No origin check as per user request
+
+            console.log('Received message in chart.html:', event.data);
+            if (event.data.type === 'initChart') {
+                const { data } = event.data;
+                console.log('Initializing chart with data:', data);
+                initializeChart(data);
+            } else if (event.data.type === 'updateData') {
+                const { data } = event.data;
+                console.log('Updating chart data:', data);
+                updateChartData(data);
+            } else if (event.data.type === 'addIndicator') {
+                const { render, indicator_id } = event.data;
+                console.log(`Adding indicator ${indicator_id} with render instructions:`, render);
+                addIndicator(render, indicator_id);
+            } else if (event.data.type === 'remove_indicator') {
+                const { indicator_id } = event.data;
+                console.log(`Removing indicator with ID: ${indicator_id}`);
+                removeIndicator(indicator_id);
+            }
+            // Add more message types and handlers as needed
+        }, false);
+
+        /**
+         * Notify the parent that the chart is ready (optional)
+         */
+        window.parent.postMessage({ type: 'chartReady' }, '*'); // As user doesn't want origin checks, use '*'
     </script>
 </body>
 </html>

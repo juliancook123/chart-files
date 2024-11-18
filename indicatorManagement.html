@@ -1,20 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Indicator Management</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             padding: 10px;
             background-color: #0D0F17;
-            overflow: hidden;
+            overflow: hidden; /* Keeps the main body from scrolling */
         }
         h2 {
             text-align: center;
         }
+        /* Container for the indicators list to manage scrolling */
+        #indicatorContainer {
+            max-height: 80vh; /* Adjust as needed */
+            overflow-y: auto; /* Enables vertical scrolling */
+            padding-right: 10px; /* Optional: Prevents content from hiding behind scrollbar */
+        }
         ul {
             list-style-type: none;
             padding: 0;
+            margin: 0;
         }
         li {
             padding: 8px 12px;
@@ -41,43 +47,77 @@
         .remove-button:hover {
             background-color: #c0392b;
         }
+
+        /* Hide scrollbar for Firefox */
+        #indicatorContainer {
+            scrollbar-width: none; /* Firefox */
+        }
+
+        /* Hide scrollbar for Internet Explorer 10+ */
+        #indicatorContainer {
+            -ms-overflow-style: none; /* IE 10+ */
+        }
+
+        /* Hide scrollbar for Webkit browsers (Chrome, Safari) */
+        #indicatorContainer::-webkit-scrollbar {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <ul id="indicatorList">
-        <!-- Indicators will be dynamically populated here -->
-    </ul>
+    <div id="indicatorContainer">
+        <ul id="indicatorList">
+            <!-- Indicators will be dynamically populated here -->
+        </ul>
+    </div>
 
     <script>
-        // Function to remove an indicator
+        // Reference to indicators container
+        const indicatorContainer = document.getElementById('indicatorContainer');
+        const indicatorList = document.getElementById('indicatorList');
+
+        /**
+         * Function to remove an indicator
+         * @param {string} indicatorId - The ID of the indicator to remove.
+         */
         function removeIndicator(indicatorId) {
             // Send a message to the parent to remove the indicator
             window.parent.postMessage({ type: 'removeIndicator', indicatorId: indicatorId }, '*');
+        }
+
+        /**
+         * Function to append indicators to the list and auto-scroll
+         * @param {Array} indicators - Array of indicator objects.
+         */
+        function updateIndicatorList(indicators) {
+            indicatorList.innerHTML = ''; // Clear existing list
+
+            indicators.forEach(indicator => {
+                const li = document.createElement('li');
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'indicator-name';
+                nameSpan.textContent = indicator.metadata.name;
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-button';
+                removeBtn.textContent = 'Remove';
+                removeBtn.onclick = () => removeIndicator(indicator.indicatorId);
+
+                li.appendChild(nameSpan);
+                li.appendChild(removeBtn);
+                indicatorList.appendChild(li);
+            });
+
+            // Auto-scroll to the bottom after updating the list
+            indicatorContainer.scrollTop = indicatorContainer.scrollHeight;
         }
 
         // Listen for messages from the parent to update the indicator list
         window.addEventListener('message', (event) => {
             if (event.data.type === 'updateIndicators') {
                 const indicators = event.data.indicators;
-                const indicatorList = document.getElementById('indicatorList');
-                indicatorList.innerHTML = ''; // Clear existing list
-
-                indicators.forEach(indicator => {
-                    const li = document.createElement('li');
-
-                    const nameSpan = document.createElement('span');
-                    nameSpan.className = 'indicator-name';
-                    nameSpan.textContent = indicator.metadata.name;
-
-                    const removeBtn = document.createElement('button');
-                    removeBtn.className = 'remove-button';
-                    removeBtn.textContent = 'Remove';
-                    removeBtn.onclick = () => removeIndicator(indicator.indicatorId);
-
-                    li.appendChild(nameSpan);
-                    li.appendChild(removeBtn);
-                    indicatorList.appendChild(li);
-                });
+                updateIndicatorList(indicators);
             }
         });
 
